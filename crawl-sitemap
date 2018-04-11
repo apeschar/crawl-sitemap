@@ -1,0 +1,40 @@
+#!/usr/bin/env php
+<?php
+
+if (sizeof($argv) != 2) {
+    fwrite(STDERR, "Usage: {$argv[0]} <sitemap url>\n");
+    exit(1);
+}
+
+crawl($argv[1], 3);
+
+function crawl($url, $maxDepth, $depth = 0) {
+    fwrite(STDOUT, "[$depth] $url\n");
+
+    $contents = file_get_contents($url);
+
+    if ($depth >= $maxDepth) {
+        return;
+    }
+
+    $document = new \DOMDocument();
+    if (!@$document->loadXML($contents)) {
+        return;
+    }
+
+    $xpath = new \DOMXPath($document);
+
+    foreach ($xpath->query('//*[local-name() = "loc"]') as $loc) {
+        $locUrl = (string) $loc->textContent;
+
+        if (filter_var($locUrl, FILTER_SANITIZE_URL)) {
+            $urls[] = $locUrl;
+        }
+    }
+
+    shuffle($urls);
+
+    foreach ($urls as $locUrl) {
+        crawl($locUrl, $maxDepth, $depth + 1);
+    }
+}
